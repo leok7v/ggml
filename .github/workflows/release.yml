@@ -1,0 +1,41 @@
+name: release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  my-job:
+    runs-on: windows-latest
+    env:
+      ARCHIVE_NAME: ${{ github.event.repository.name }}-${{ github.event.release.tag_name }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.3.1
+
+      - name: build release
+        run: msbuild msvc2022\ggml.sln -t:rebuild -verbosity:quiet -property:Configuration=Release
+
+      - name: upload gpt-2.exe
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: bin\Release\gpt-2.exe
+          asset_name: gpt-2.exe
+          asset_content_type: application/exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: upload gpt-j.exe
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: bin\Release\gpt-2.exe
+          asset_name: gpt-j.exe
+          asset_content_type: application/exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

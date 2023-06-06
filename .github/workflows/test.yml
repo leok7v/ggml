@@ -1,0 +1,27 @@
+name: test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build_and_test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: setup msbuild
+        uses: microsoft/setup-msbuild@v1.3.1
+        with:
+          msbuild-architecture: x64
+          vs-prerelease: true
+      - name: build release
+        run:  msbuild msvc2022\ggml.sln -t:rebuild -verbosity:quiet -property:Configuration=Release
+      - name: test
+        run:  |
+          bin/Release/gpt-2.exe
+          bin/Release/gpt-j.exe
