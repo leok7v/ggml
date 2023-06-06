@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.33530.505
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gpt-2", "gpt-2.vcxproj", "{EE7165F8-CF17-326B-95CF-06D365F8C075}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gpt-j", "gpt-j.vcxproj", "{EE7165F8-CF17-326B-95CF-06D365F8C057}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EE7165F8-CF17-326B-95CF-06D365F8C075}.Debug|x64.ActiveCfg = Debug|x64
+		{EE7165F8-CF17-326B-95CF-06D365F8C075}.Debug|x64.Build.0 = Debug|x64
+		{EE7165F8-CF17-326B-95CF-06D365F8C075}.Release|x64.ActiveCfg = Release|x64
+		{EE7165F8-CF17-326B-95CF-06D365F8C075}.Release|x64.Build.0 = Release|x64
+		{EE7165F8-CF17-326B-95CF-06D365F8C057}.Debug|x64.ActiveCfg = Debug|x64
+		{EE7165F8-CF17-326B-95CF-06D365F8C057}.Debug|x64.Build.0 = Debug|x64
+		{EE7165F8-CF17-326B-95CF-06D365F8C057}.Release|x64.ActiveCfg = Release|x64
+		{EE7165F8-CF17-326B-95CF-06D365F8C057}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7F0125A7-1C22-3F7A-91AE-39BC5CBF4168}
+	EndGlobalSection
+EndGlobal
