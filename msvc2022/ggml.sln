@@ -8,6 +8,10 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gpt-j", "gpt-j.vcxproj", "{EE7165F8-CF17-326B-95CF-06D365F8C057}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "misc", "misc", "{C64EC9F6-235B-45BF-8B9F-705C8530BFA7}"
+	ProjectSection(SolutionItems) = preProject
+		..\README.md = ..\README.md
+		..\README2.md = ..\README2.md
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{F9706196-C9A7-42AF-BB6E-33C457E6215B}"
 EndProject
