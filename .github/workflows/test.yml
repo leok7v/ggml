@@ -23,7 +23,7 @@ jobs:
         run:  msbuild msvc2022\ggml.sln -t:rebuild -verbosity:quiet -property:Configuration=Release
       - name: download
         run: |
-          scripts\download.bat ggml-model-gpt-2-117M.bin https://github.com/leok7v/ggml/releases/download/2023-06-06/ggml-model-gpt-2-117M.bin
+          scripts\download.bat models\ggml-model-gpt-2-117M.bin https://github.com/leok7v/ggml/releases/download/2023-06-06/ggml-model-gpt-2-117M.bin
       - name: test
         run: |
           bin/Release/gpt-2.exe -m models\ggml-model-gpt-2-117M.bin
