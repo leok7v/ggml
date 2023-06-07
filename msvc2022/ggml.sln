@@ -18,6 +18,33 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{
 		..\.github\workflows\test.yml = ..\.github\workflows\test.yml
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scripts", "scripts", "{93603A1C-862C-4899-A7C1-AF701980347B}"
+	ProjectSection(SolutionItems) = preProject
+		..\scripts\download.bat = ..\scripts\download.bat
+		..\scripts\prebuild.bat = ..\scripts\prebuild.bat
+		..\scripts\sha256.bat = ..\scripts\sha256.bat
+		..\scripts\sync-llama.sh = ..\scripts\sync-llama.sh
+		..\scripts\sync-whisper.sh = ..\scripts\sync-whisper.sh
+		..\scripts\version.bat = ..\scripts\version.bat
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "models", "models", "{A650FA51-E665-4BC6-A107-AEFA2543BD8D}"
+	ProjectSection(SolutionItems) = preProject
+		..\models\gpt-2.split.bat = ..\models\gpt-2.split.bat
+		..\models\gpt-j.split.bat = ..\models\gpt-j.split.bat
+		..\models\slm-3.split.bat = ..\models\slm-3.split.bat
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "sha256", "sha256", "{2D9B4AA6-224E-4E1D-B4A4-6AAC57BD7E08}"
+	ProjectSection(SolutionItems) = preProject
+		..\models\ggml-model-gpt-2-117M.sha256 = ..\models\ggml-model-gpt-2-117M.sha256
+		..\models\ggml-model-gpt-2-1558M.sha256 = ..\models\ggml-model-gpt-2-1558M.sha256
+		..\models\ggml-model-gpt-2-345M.sha256 = ..\models\ggml-model-gpt-2-345M.sha256
+		..\models\ggml-model-gpt-2-774M.sha256 = ..\models\ggml-model-gpt-2-774M.sha256
+		..\models\ggml-model-gpt-j-6B.sha256 = ..\models\ggml-model-gpt-j-6B.sha256
+		..\models\ggml-model-stablelm-base-alpha-3b-f16.sha256 = ..\models\ggml-model-stablelm-base-alpha-3b-f16.sha256
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -39,6 +66,9 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{F9706196-C9A7-42AF-BB6E-33C457E6215B} = {C64EC9F6-235B-45BF-8B9F-705C8530BFA7}
 		{77FA9A80-5BAB-4E32-B6E3-9990EB3307AE} = {F9706196-C9A7-42AF-BB6E-33C457E6215B}
+		{93603A1C-862C-4899-A7C1-AF701980347B} = {C64EC9F6-235B-45BF-8B9F-705C8530BFA7}
+		{A650FA51-E665-4BC6-A107-AEFA2543BD8D} = {C64EC9F6-235B-45BF-8B9F-705C8530BFA7}
+		{2D9B4AA6-224E-4E1D-B4A4-6AAC57BD7E08} = {A650FA51-E665-4BC6-A107-AEFA2543BD8D}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7F0125A7-1C22-3F7A-91AE-39BC5CBF4168}
