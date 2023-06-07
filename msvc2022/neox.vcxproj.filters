@@ -6,12 +6,12 @@
     <ClInclude Include="..\examples\common-ggml.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\examples\gpt-j\main.cpp" />
     <ClCompile Include="..\examples\common.cpp" />
     <ClCompile Include="..\examples\common-ggml.cpp" />
     <ClCompile Include="..\src\ggml.c" />
+    <ClCompile Include="..\examples\gpt-neox\main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\examples\gpt-j\README.md" />
+    <None Include="..\examples\gpt-neox\README.md" />
   </ItemGroup>
 </Project>

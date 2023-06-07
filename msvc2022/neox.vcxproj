@@ -14,11 +14,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{EE7165F8-CF17-326B-95CF-06D365F8C057}</ProjectGuid>
+    <ProjectGuid>{EE7165F8-CF17-326B-95CF-06D365F8C068}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <WindowsTargetPlatformVersion>10.0.22621.0</WindowsTargetPlatformVersion>
     <Platform>x64</Platform>
-    <ProjectName>gpt-j</ProjectName>
+    <ProjectName>neox</ProjectName>
     <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -121,11 +121,11 @@
   <ItemGroup>
     <ClCompile Include="..\examples\common-ggml.cpp" />
     <ClCompile Include="..\examples\common.cpp" />
-    <ClCompile Include="..\examples\gpt-j\main.cpp" />
+    <ClCompile Include="..\examples\gpt-neox\main.cpp" />
     <ClCompile Include="..\src\ggml.c" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\examples\gpt-j\README.md" />
+    <None Include="..\examples\gpt-neox\README.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -49,6 +49,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "sha256", "sha256", "{2D9B4A
 		..\models\ggml-model-stablelm-base-alpha-3b-f16.sha256 = ..\models\ggml-model-stablelm-base-alpha-3b-f16.sha256
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "neox", "neox.vcxproj", "{EE7165F8-CF17-326B-95CF-06D365F8C068}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -63,6 +65,10 @@ Global
 		{EE7165F8-CF17-326B-95CF-06D365F8C057}.Debug|x64.Build.0 = Debug|x64
 		{EE7165F8-CF17-326B-95CF-06D365F8C057}.Release|x64.ActiveCfg = Release|x64
 		{EE7165F8-CF17-326B-95CF-06D365F8C057}.Release|x64.Build.0 = Release|x64
+		{EE7165F8-CF17-326B-95CF-06D365F8C068}.Debug|x64.ActiveCfg = Debug|x64
+		{EE7165F8-CF17-326B-95CF-06D365F8C068}.Debug|x64.Build.0 = Debug|x64
+		{EE7165F8-CF17-326B-95CF-06D365F8C068}.Release|x64.ActiveCfg = Release|x64
+		{EE7165F8-CF17-326B-95CF-06D365F8C068}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

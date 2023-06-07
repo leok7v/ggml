@@ -111,6 +111,9 @@
     <ClCompile Include="..\examples\gpt-2\main.cpp" />
     <ClCompile Include="..\src\ggml.c" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\examples\gpt-2\README.md" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

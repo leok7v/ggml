@@ -1,14 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{B66E0F15-19EE-3FAE-81AD-1A54571BB10E}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{584A9FB4-DD19-3A5D-A8D3-2AD9E60872CA}</UniqueIdentifier>
-    </Filter>
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="..\include\ggml\ggml.h" />
     <ClInclude Include="..\examples\common.h" />
     <ClInclude Include="..\examples\common-ggml.h" />
@@ -18,5 +10,8 @@
     <ClCompile Include="..\examples\common.cpp" />
     <ClCompile Include="..\examples\common-ggml.cpp" />
     <ClCompile Include="..\src\ggml.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\examples\gpt-2\README.md" />
   </ItemGroup>
 </Project>
