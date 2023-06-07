@@ -1,3 +1,6 @@
+version.h
+bin/
+models/*.bin
 build/
 build-debug/
 build-*/

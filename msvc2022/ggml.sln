@@ -7,6 +7,17 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gpt-2", "gpt-2.vcxproj", "{
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gpt-j", "gpt-j.vcxproj", "{EE7165F8-CF17-326B-95CF-06D365F8C057}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "misc", "misc", "{C64EC9F6-235B-45BF-8B9F-705C8530BFA7}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{F9706196-C9A7-42AF-BB6E-33C457E6215B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{77FA9A80-5BAB-4E32-B6E3-9990EB3307AE}"
+	ProjectSection(SolutionItems) = preProject
+		..\.github\workflows\build.yml = ..\.github\workflows\build.yml
+		..\.github\workflows\release.yml = ..\.github\workflows\release.yml
+		..\.github\workflows\test.yml = ..\.github\workflows\test.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -24,6 +35,10 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F9706196-C9A7-42AF-BB6E-33C457E6215B} = {C64EC9F6-235B-45BF-8B9F-705C8530BFA7}
+		{77FA9A80-5BAB-4E32-B6E3-9990EB3307AE} = {F9706196-C9A7-42AF-BB6E-33C457E6215B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7F0125A7-1C22-3F7A-91AE-39BC5CBF4168}
