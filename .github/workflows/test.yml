@@ -24,7 +24,8 @@ jobs:
       - name: download
         run: |
           scripts\download.bat models\ggml-model-gpt-2-117M.bin https://github.com/leok7v/ggml/releases/download/2023-06-06/ggml-model-gpt-2-117M.bin
+          scripts\download.bat models\ggml-model-stablelm-base-alpha-3b-q4_0.bin https://github.com/leok7v/ggml/releases/download/2023-06-06/ggml-model-stablelm-base-alpha-3b-q4_0.bin
       - name: test
         run: |
           bin/Release/gpt-2.exe -m models\ggml-model-gpt-2-117M.bin
-#         bin/Release/gpt-j.exe
+          bin/Release/neox.exe  -m models\ggml-model-stablelm-base-alpha-3b-q4_0.bin -p "The best way to learn foreign language is" -n 256 -t 2
