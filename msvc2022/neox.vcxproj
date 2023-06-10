@@ -116,12 +116,19 @@
   <ItemGroup>
     <ClInclude Include="..\examples\common-ggml.h" />
     <ClInclude Include="..\examples\common.h" />
+    <ClInclude Include="..\ext\fp16.h" />
+    <ClInclude Include="..\ext\rt.h" />
     <ClInclude Include="..\include\ggml\ggml.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\examples\common-ggml.cpp" />
     <ClCompile Include="..\examples\common.cpp" />
-    <ClCompile Include="..\examples\gpt-neox\main.cpp" />
+    <ClCompile Include="..\examples\gpt-neox\main.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\examples\gpt-neox\neox.cpp" />
+    <ClCompile Include="..\ext\rt.c" />
     <ClCompile Include="..\src\ggml.c" />
   </ItemGroup>
   <ItemGroup>

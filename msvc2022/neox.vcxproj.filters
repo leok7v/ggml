@@ -4,12 +4,16 @@
     <ClInclude Include="..\include\ggml\ggml.h" />
     <ClInclude Include="..\examples\common.h" />
     <ClInclude Include="..\examples\common-ggml.h" />
+    <ClInclude Include="..\ext\rt.h" />
+    <ClInclude Include="..\ext\fp16.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\examples\common.cpp" />
     <ClCompile Include="..\examples\common-ggml.cpp" />
     <ClCompile Include="..\src\ggml.c" />
     <ClCompile Include="..\examples\gpt-neox\main.cpp" />
+    <ClCompile Include="..\examples\gpt-neox\neox.cpp" />
+    <ClCompile Include="..\ext\rt.c" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\examples\gpt-neox\README.md" />

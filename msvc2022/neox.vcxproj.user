@@ -1,11 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerCommandArguments>-m $(SolutionDir)..\models\ggml-model-stablelm-base-alpha-3b-f16.bin -p "The best way to learn foreign language is" -t 8 -n 128</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>-m $(SolutionDir)..\models\ggml-model-stablelm-base-alpha-3b-q4_0.bin -p "The best way to learn foreign language is" -t 8 -n 16</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LocalDebuggerCommandArguments>-m $(SolutionDir)..\models\ggml-model-stablelm-base-alpha-3b-f16.bin -p "The best way to learn foreign language is" -t 8 -n 128</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>-m $(SolutionDir)..\models\ggml-model-stablelm-base-alpha-3b-q4_0.bin -p "The best way to learn foreign language is" -t 8 -n 16</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
 </Project>
