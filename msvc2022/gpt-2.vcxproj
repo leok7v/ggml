@@ -53,7 +53,7 @@
     <ClCompile>
       <PreprocessorDefinitions />
       <TreatWarningAsError />
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <ResourceCompile>
@@ -78,7 +78,7 @@
     <ClCompile>
       <PreprocessorDefinitions />
       <TreatWarningAsError />
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <ResourceCompile>
