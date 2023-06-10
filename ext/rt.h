@@ -6,12 +6,13 @@
 #include <malloc.h>
 #include <math.h>
 #include <stdarg.h>
-// #include <stdatomic.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <memory.h>
 
 // tiny Windows runtime for missing stuff
@@ -24,6 +25,9 @@ extern "C" {
     #define countof(a) (sizeof(a) / sizeof((a)[0])) // MS is _countof()
 #endif
 
+#define minimum(a, b) ((a) < (b) ? (a) : (b))
+#define maximum(a, b) ((a) > (b) ? (a) : (b))
+
 #define null ((void*)0) // like nullptr but for C99
 
 uint32_t random32(uint32_t* state); // state aka seed
@@ -35,6 +39,8 @@ int      memmap_resource(const char* label, void* *data, int64_t *bytes);
 void*    load_dl(const char* pathname); // dlopen | LoadLibrary
 void*    find_symbol(void* dl, const char* symbol); // dlsym | GetProcAddress
 void     sleep(double seconds);
+int      mem_map(const char* filename, void** data, int64_t* bytes, bool ro);
+void     mem_unmap(void* address, int64_t bytes);
 
 #if defined(__GNUC__) || defined(__clang__)
 #define attribute_packed __attribute__((packed))
@@ -120,17 +126,10 @@ uint32_t random32(uint32_t* state) {
 #define std_output_handle   ((uint32_t)-11)
 #define std_error_handle    ((uint32_t)-12)
 
-typedef union LARGE_INTEGER {
-    struct {
-        uint32_t LowPart;
-        int32_t HighPart;
-    };
-    int64_t QuadPart;
-} LARGE_INTEGER;
-
 void*    __stdcall GetStdHandle(uint32_t stdhandle);
-int32_t  __stdcall QueryPerformanceCounter(LARGE_INTEGER* lpPerformanceCount);
-int32_t  __stdcall QueryPerformanceFrequency(LARGE_INTEGER* lpFrequency);
+int32_t  __stdcall QueryPerformanceCounter(int64_t* performance_count);
+int32_t  __stdcall QueryPerformanceFrequency(int64_t* frequency);
+int32_t  __stdcall GetFileSizeEx(void* file, int64_t* size);
 void     __stdcall OutputDebugStringA(const char* s);
 void*    __stdcall FindResourceA(void* module, const char* name, const char* type);
 uint32_t __stdcall SizeofResource(void* module, void* res);
@@ -138,31 +137,35 @@ void*    __stdcall LoadResource(void* module, void* res);
 void*    __stdcall LockResource(void* res);
 void*    __stdcall LoadLibraryA(const char* pathname);
 void*    __stdcall GetProcAddress(void* module, const char* pathname);
-
+int32_t  __stdcall GetLastError(void);
+int32_t  __stdcall CloseHandle(void* handle);
+void*    __stdcall CreateFileMappingA(void* file, void* attributes, uint32_t protect,
+                    uint32_t maximum_size_high, uint32_t maximum_size_low,
+                    const char* name);
+void*    __stdcall MapViewOfFile(void* mapping, uint32_t access,
+                    uint32_t file_offset_high, uint32_t file_offset_low,
+                    size_t number_of_bytes_to_map);
+void*    __stdcall CreateFileA(const char* filename, uint32_t access,
+                    uint32_t share_mode, void* security_attributes,
+                    uint32_t creation_disposition,
+                    uint32_t flags_and_attributes, void* template_file);
+int32_t  __stdcall UnmapViewOfFile(void* address);
 
 double seconds() { // since_boot
-    LARGE_INTEGER qpc;
+    int64_t qpc = 0;
     QueryPerformanceCounter(&qpc);
     static double one_over_freq;
     if (one_over_freq == 0) {
-        LARGE_INTEGER frequency;
+        int64_t frequency = 0;
         QueryPerformanceFrequency(&frequency);
-        one_over_freq = 1.0 / frequency.QuadPart;
+        one_over_freq = 1.0 / frequency;
     }
-    return (double)qpc.QuadPart * one_over_freq;
+    return (double)qpc * one_over_freq;
 }
 
 int64_t nanoseconds() {
     return (int64_t)(seconds() * NSEC_IN_SEC);
 }
-
-/* posix:
-uint64_t time_in_nanoseconds_absolute() {
-    struct timespec tm = {0};
-    clock_gettime(CLOCK_MONOTONIC, &tm);
-    return NSEC_IN_SEC * (int64_t)tm.tv_sec + tm.tv_nsec;
-}
-*/
 
 void printline(const char* file, int line, const char* func,
         const char* format, ...) {
@@ -210,12 +213,11 @@ void sleep(double seconds) {
     assert(seconds >= 0);
     if (seconds < 0) { seconds = 0; }
     int64_t ns100 = (int64_t)(seconds * 1.0e+7); // in 0.1 us aka 100ns
-    typedef int (__stdcall *nt_delay_execution_t)(int alertable,
-        LARGE_INTEGER* delay_interval);
+    typedef int (__stdcall *nt_delay_execution_t)(int alertable, int64_t* delay_interval);
     static nt_delay_execution_t NtDelayExecution;
     // delay in 100-ns units. negative value means delay relative to current.
-    LARGE_INTEGER delay = {0}; // delay in 100-ns units.
-    delay.QuadPart = -ns100; // negative value means delay relative to current.
+    int64_t delay = {0}; // delay in 100-ns units.
+    delay = -ns100; // negative value means delay relative to current.
     if (NtDelayExecution == null) {
         static void* ntdll;
         if (ntdll == null) { ntdll = load_dl("ntdll.dll"); }
@@ -229,8 +231,90 @@ void sleep(double seconds) {
     NtDelayExecution(false, &delay);
 }
 
+int mem_map_file(void* file, void** data, int64_t* bytes, bool ro) {
+    int r = 0;
+    void* address = null;
+    int64_t size = 0;
+    enum {
+        PAGE_READONLY  = 0x02,
+        PAGE_READWRITE = 0x04
+    };
+    enum {
+        FILE_MAP_READ  = 0x02,
+        FILE_MAP_WRITE = 0x04
+    };
+    if (GetFileSizeEx(file, &size)) {
+        void* map_file = CreateFileMappingA(file, NULL,
+            ro ? PAGE_READONLY : PAGE_READWRITE, 0, size, null);
+        if (map_file == null) {
+            r = GetLastError();
+        } else {
+            address = MapViewOfFile(map_file, ro ?
+                FILE_MAP_READ : FILE_MAP_READ|FILE_MAP_WRITE, 0, 0, size);
+            if (address != null) {
+                *bytes = size;
+            } else {
+                r = GetLastError();
+            }
+            int b = CloseHandle(map_file); // not setting errno because CloseHandle is expected to work here
+            assert(b); (void)b;
+        }
+    } else {
+        r = GetLastError();
+    }
+    if (r == 0) { *data = address; }
+    return r;
+}
+
+int mem_map(const char* filename, void** data, int64_t* bytes, bool ro) {
+    *bytes = 0; // important for empty files - which result in (null, 0) and errno == 0
+    int r = 0;
+    enum {
+        GENERIC_READ   = 0x80000000L,
+        GENERIC_WRITE  = 0x40000000L
+    };
+    enum {
+        FILE_SHARE_READ   = 0x00000001,
+        FILE_SHARE_WRITE  = 0x00000002,
+        FILE_SHARE_DELETE = 0x00000004
+    };
+    enum {
+        CREATE_NEW        = 1,
+        CREATE_ALWAYS     = 2,
+        OPEN_EXISTING     = 3,
+        OPEN_ALWAYS       = 4,
+        TRUNCATE_EXISTING = 5,
+        FILE_ATTRIBUTE_NORMAL = 0x00000080
+    };
+    #define INVALID_HANDLE_VALUE ((void*)(intptr_t)-1)
+    uint32_t access = ro ? GENERIC_READ : (GENERIC_READ | GENERIC_WRITE);
+    // w/o FILE_SHARE_DELETE RAM-based files: FILE_FLAG_DELETE_ON_CLOSE | FILE_ATTRIBUTE_TEMPORARY won't open
+    uint32_t share  = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+    void* file = CreateFileA(filename, access, share, null, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, null);
+    if (file == INVALID_HANDLE_VALUE) {
+        r = GetLastError();
+    } else {
+        r = mem_map_file(file, data, bytes, ro);
+        int b = CloseHandle(file); // not setting errno because CloseHandle is expected to work here
+        assert(b); (void)b;
+    }
+    return r;
+}
+
+void mem_unmap(void* address, int64_t bytes) {
+    (void)bytes; /* bytes unused, need by posix version */
+    if (address != null) {
+        fatal_if(!UnmapViewOfFile(address));
+    }
+}
+
 /* POSIX:
-#include <time.h>
+uint64_t time_in_nanoseconds_absolute() {
+    struct timespec tm = {0};
+    clock_gettime(CLOCK_MONOTONIC, &tm);
+    return NSEC_IN_SEC * (int64_t)tm.tv_sec + tm.tv_nsec;
+}
+
 void sleep(double seconds) {
     struct timespec req = {
        .tv_sec  = (uint64_t)seconds;
@@ -238,6 +322,28 @@ void sleep(double seconds) {
     };
     nanosleep(&req, null);
 }
+
+int mem_map(const char* filename, void** data, int64_t* bytes, bool ro) {
+    int r = 0;
+    int fd = open(filename, ro ? O_RDONLY : O_RDWR);
+    if (fd >= 0) {
+        int length = (int)lseek(fd, 0, SEEK_END);
+        if (0 < length && length <= 0x7FFFFFFF) {
+            *data = mmap(0, length, ro ? PROT_READ : PROT_READ|PROT_WRITE, ro ? MAP_PRIVATE : MAP_SHARED, fd, 0);
+            if (*data != null) { *bytes = length; }
+            else { r = errno; }
+        }
+        close(fd);
+    } else { r = errno; }
+    return r;
+}
+
+void mem_unmap(void* address, int64_t bytes) {
+    if (address != null) {
+        munmap(address, bytes);
+    }
+}
+
 */
 
 #endif // RT_IMPLEMENTATION
