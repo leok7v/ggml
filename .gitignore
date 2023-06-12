@@ -4,6 +4,9 @@ models/*.bin
 build/
 build-debug/
 build-*/
+xcode/DerivedData/
+xcode/*/xcuserdata/
+xcode/*/*/xcuserdata/
 
 compile_commands.json
 

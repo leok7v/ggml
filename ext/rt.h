@@ -1,9 +1,17 @@
 #pragma once
 #include <assert.h>
 #include <ctype.h>
+#include <errno.h>
 #include <float.h>
+#if _MSC_VER
 #include <io.h>
 #include <malloc.h>
+#else
+#include <sys/mman.h>
+#include <sys/fcntl.h>
+#include <signal.h>
+#include <unistd.h>
+#endif
 #include <math.h>
 #include <stdarg.h>
 #include <stdatomic.h>
@@ -15,7 +23,15 @@
 #include <time.h>
 #include <memory.h>
 
-// tiny Windows runtime for missing stuff
+// runtime to mitigate tiny diffs of Linux, MacOS and Windows
+
+#if __clang__
+// https://clang.llvm.org/docs/DiagnosticsReference.html
+// #pragma clang diagnostic ignored "-Wunused-variable"
+// #pragma clang diagnostic ignored "-Wconversion"
+#pragma clang diagnostic ignored "-Wformat"
+#pragma clang diagnostic ignored "-Wformat-invalid-specifier"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,16 +47,17 @@ extern "C" {
 #define null ((void*)0) // like nullptr but for C99
 
 uint32_t random32(uint32_t* state); // state aka seed
-double   seconds();     // seconds since boot (3/10MHz resolution)
-int64_t  nanoseconds(); // nanoseconds since boot (3/10MHz resolution)
+double   seconds(void);     // seconds since boot (3/10MHz resolution)
+uint64_t nanoseconds(void); // nanoseconds since boot (3/10MHz resolution)
 void     printline(const char* file, int line, const char* func,
                    const char* format, ...);
 int      memmap_resource(const char* label, void* *data, int64_t *bytes);
 void*    load_dl(const char* pathname); // dlopen | LoadLibrary
 void*    find_symbol(void* dl, const char* symbol); // dlsym | GetProcAddress
-void     sleep(double seconds);
 int      mem_map(const char* filename, void** data, int64_t* bytes, bool ro);
 void     mem_unmap(void* address, int64_t bytes);
+void     sleep_for(double seconds);
+void     _debugbreak(void); // breakpoint
 
 #if defined(__GNUC__) || defined(__clang__)
 #define attribute_packed __attribute__((packed))
@@ -64,7 +81,11 @@ void     mem_unmap(void* address, int64_t bytes);
     #define fp64_t double
 #endif
 
+#if _MSC_VER
 #define thread_local __declspec(thread)
+#else
+#define thread_local __thread
+#endif
 
 #define println(...) printline(__FILE__, __LINE__, __func__, "" __VA_ARGS__)
 
@@ -81,8 +102,6 @@ void     mem_unmap(void* address, int64_t bytes);
 #define assert(...) assertion(__VA_ARGS__)
 
 #define static_assertion(b) static_assert(b, #b)
-
-#include "fp16.h"
 
 enum {
     NSEC_IN_USEC = 1000,
@@ -119,6 +138,8 @@ uint32_t random32(uint32_t* state) {
     z ^= z + (z ^ (z >> 7)) * (z | 61UL);
     return z ^ (z >> 14);
 }
+
+#if _MSC_VER
 
 #pragma comment(lib, "kernel32")
 
@@ -209,7 +230,7 @@ void* find_symbol(void* dl, const char* symbol) {
     return GetProcAddress(dl, symbol); // dlsym on Linux
 }
 
-void sleep(double seconds) {
+void sleep_for(double seconds) {
     assert(seconds >= 0);
     if (seconds < 0) { seconds = 0; }
     int64_t ns100 = (int64_t)(seconds * 1.0e+7); // in 0.1 us aka 100ns
@@ -308,16 +329,25 @@ void mem_unmap(void* address, int64_t bytes) {
     }
 }
 
-/* POSIX:
-uint64_t time_in_nanoseconds_absolute() {
+#else // POSIX and APPLE
+
+void _debugbreak(void) {
+    raise(SIGTRAP);
+}
+
+uint64_t nanoseconds(void) {
     struct timespec tm = {0};
     clock_gettime(CLOCK_MONOTONIC, &tm);
     return NSEC_IN_SEC * (int64_t)tm.tv_sec + tm.tv_nsec;
 }
 
-void sleep(double seconds) {
+double seconds(void) {
+    return (double)nanoseconds() / NSEC_IN_SEC;
+}
+
+void sleep_for(double seconds) {
     struct timespec req = {
-       .tv_sec  = (uint64_t)seconds;
+       .tv_sec  = (uint64_t)seconds,
        .tv_nsec = (uint64_t)(seconds * NSEC_IN_SEC) % NSEC_IN_SEC
     };
     nanosleep(&req, null);
@@ -344,10 +374,24 @@ void mem_unmap(void* address, int64_t bytes) {
     }
 }
 
-*/
+void printline(const char* file, int line, const char* func,
+        const char* format, ...) {
+    // chop off full path from filename:
+    const char* p = file + strlen(file) - 1;
+    while (p > file && *p != '/') { p--; }
+    if (p != file) { p++; }
+    va_list vl;
+    va_start(vl, format);
+    printf("%s(%d): %s() ", p, line, func);
+    vprintf(format, vl);
+    printf("\n");
+}
+
+#endif
 
 #endif // RT_IMPLEMENTATION
 
 #ifdef __cplusplus
 } // extern "C"
 #endif
+
