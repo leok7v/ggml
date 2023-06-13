@@ -4,6 +4,42 @@
 #include "rt.h"
 #undef main
 #undef gpt_neox_model_load
+#ifdef WIN32
+#include <Windows.h>
+#include <WinCon.h>
+#endif
+
+#ifdef WIN32
+// cyan on blue background:
+// FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_INTENSITY | BACKGROUND_BLUE
+// White background Black text:
+// BACKGROUND_BLUE | BACKGROUND_GREEN | BACKGROUND_RED
+static void set_text_color(uint32_t foreground, uint32_t background) {
+    uint16_t a = 0;
+    int r = (foreground >>  0) & 0x3;
+    int g = (foreground >>  8) & 0x3;
+    int b = (foreground >> 16) & 0x3;
+    if (r > 1 || g > 1 || b > 1) { a |= FOREGROUND_INTENSITY; }
+    if (r > 0) { a |= FOREGROUND_RED; }
+    if (g > 0) { a |= FOREGROUND_GREEN; }
+    if (b > 0) { a |= FOREGROUND_BLUE; }
+    r = (background >>  0) & 0x3;
+    g = (background >>  8) & 0x3;
+    b = (background >> 16) & 0x3;
+    if (r > 1 || g > 1 || b > 1) { a |= BACKGROUND_INTENSITY; }
+    if (r > 0) { a |= BACKGROUND_RED; }
+    if (g > 0) { a |= BACKGROUND_GREEN; }
+    if (b > 0) { a |= BACKGROUND_BLUE; }
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    SetConsoleTextAttribute(hConsole, a);
+}
+
+#else
+static void set_text_color(uint32_t foreground, uint32_t background) {
+    (void)foreground; (void)background;
+    // TODO: vt100 ESC colors? Curses?
+}
+#endif
 
 // load the model's weights from a file
 bool gpt_neox_model_load(const std::string & fname, gpt_neox_model & model, gpt_vocab & vocab) {
@@ -284,7 +320,9 @@ static std::vector<gpt_vocab::id> user_input(gpt_vocab &vocab) {
     char text[4096] = {0};
     std::vector<gpt_vocab::id> append;
     while (text[0] == 0 && append.size() == 0) {
-        printf("\nUser: ");
+        set_text_color(0x000002, 0x000000); // bright red on black:
+        printf("\nUser: "); fflush(stdout);
+        set_text_color(0x010101, 0x000000); // white on black:
         fgets(text, countof(text) , stdin);
         if (strstr(text, "qiut") == text || strstr(text, "exit")) {
             return std::vector<gpt_vocab::id>();
@@ -296,6 +334,7 @@ static std::vector<gpt_vocab::id> user_input(gpt_vocab &vocab) {
 }
 
 static void print_text(gpt_vocab &vocab, std::vector<gpt_vocab::id> &embd, int pos) {
+    set_text_color(0x000200, 0x000000); // bright green on black:
     int k = 0;
     for (auto id : embd) {
         const char* token = vocab.id_to_token[id].c_str();
@@ -305,6 +344,57 @@ static void print_text(gpt_vocab &vocab, std::vector<gpt_vocab::id> &embd, int p
         k++;
     }
     fflush(stdout);
+    set_text_color(0x010101, 0x000000); // white on black:
+}
+
+static void dictionary(gpt_vocab &vocab) {
+    for (auto e : vocab.token_to_id) {
+        auto id = e.second;
+        const char* token = e.first.c_str();
+        std::string s = std::string(e.first) + "";
+        std::transform(s.begin(), s.end(), s.begin(),
+            [](unsigned char c){ return std::tolower(c); });
+        const char* u = s.c_str(); // uncased
+        if (strcmp(u, "user") == 0) {
+            println("id: %d token: \"%s\"", id, token);
+        }
+        if (strcmp(u, "system") == 0) {
+            println("id: %d token: \"%s\"", id, token);
+        }
+        if (strcmp(u, "tweet") == 0) {
+            println("id: %d token: \"%s\"", id, token);
+        }
+        if (strcmp(u, "twitter") == 0) {
+            println("id: %d token: \"%s\"", id, token);
+        }
+        if (strcmp(u, "redit") == 0) {
+            println("id: %d token: \"%s\"", id, token);
+        }
+        if (strcmp(u, "wikipedia") == 0) {
+            println("id: %d token: \"%s\"", id, token);
+        }
+        if (strcmp(u, "assistant") == 0) {
+            println("id: %d token: \"%s\"", id, token);
+        }
+        if (strcmp(u, "human") == 0) {
+            println("id: %d token: \"%s\"", id, token);
+        }
+        if (strcmp(u, "twit") == 0) {
+            println("id: %d token: \"%s\"", id, token);
+        }
+        if (strcmp(u, ":") == 0) {
+            println("id: %d token: \"%s\"", id, token);
+        }
+        if (strstr(u, "<|") != null || strstr(u, ">|") != null || strstr(u, "#") != null) {
+            println("id: %d token: \"%s\"", id, token);
+        }
+        if (strcmp(u, ":") == 0) {
+            println("id: %d token: \"%s\"", id, token);
+        }
+        if (strstr(u, ">") != null) {
+            println("id: %d token: \"%s\"", id, token);
+        }
+    }
 }
 
 int main(int argc, char ** argv) {
@@ -344,13 +434,18 @@ prompt = starting_prompt;
         t_load_us = ggml_time_us() - t_start_us;
         test_gpt_tokenizer(vocab, params.token_test);
     }
+    // RoPE stands for "Relative Positional Encoding."
+    // n_past: https://arxiv.org/pdf/2104.09864.pdf
     int n_past = 0;
     int64_t t_sample_us  = 0;
     int64_t t_predict_us = 0;
     std::vector<float> logits;
     // determine the required inference memory per token:
     size_t mem_per_token = 0;
-    gpt_neox_eval(model, params.n_threads, 0, { 0, 1, 2, 3 }, logits, mem_per_token);
+    int64_t t_start_us = ggml_time_us();
+    fatal_if(!gpt_neox_eval(model, params.n_threads, 0, { 0, 1, 2, 3 }, logits, mem_per_token));
+    t_predict_us += ggml_time_us() - t_start_us;
+    dictionary(vocab);
     params.temp = 0.9f;
     std::vector<gpt_vocab::id> embd;
     int stopid = 0; // vocab.token_to_id["###"];
@@ -359,6 +454,8 @@ prompt = starting_prompt;
     bool ask = true;
     int last_id = -1;
     int answer_word_count = 0;
+    int64_t predictions = 0;
+    int64_t samples = 0;
     while (!done) {
         if (ask) {
             std::vector<gpt_vocab::id> u = user_input(vocab);
@@ -370,8 +467,11 @@ prompt = starting_prompt;
             last_id = -1;
         } else {
             print_text(vocab, embd, 0);
+            t_start_us = ggml_time_us();
             fatal_if(!gpt_neox_eval(model, params.n_threads, n_past, embd, logits, mem_per_token));
+            t_predict_us += ggml_time_us() - t_start_us;
             n_past += embd.size();
+            predictions += embd.size();
             embd.clear();
             // sample next token
             const int   top_k = params.top_k;
@@ -382,13 +482,18 @@ prompt = starting_prompt;
             const int64_t t_start_sample_us = ggml_time_us();
             id = gpt_sample_top_k_top_p(vocab, logits.data() + (logits.size() - n_vocab), top_k, top_p, temp, rng);
             t_sample_us += ggml_time_us() - t_start_sample_us;
+            samples++;
             // add it to the context
             if (id == stopid) {
                 ask = true;
-            } else if (answer_word_count > 20 && vocab.id_to_token[id].c_str()[0] == '\n') {
+            } else if (answer_word_count > 400) {
+                ask = true;
+            } else if (answer_word_count > 200 && vocab.id_to_token[id].c_str()[0] == '\n') {
                 ask = true; // enough
-            } else if (answer_word_count > 20 && vocab.id_to_token[id].c_str()[0] == '.') {
+                print_text(vocab, embd, 0);
+            } else if (answer_word_count > 200 && vocab.id_to_token[id].c_str()[0] == '.') {
                 ask = true; // enough
+                print_text(vocab, embd, 0);
             } else if (id == last_id) {
                 ask = true; // stutering
             } else {
@@ -405,8 +510,8 @@ prompt = starting_prompt;
         println("");
         println("mem per token = %8zu bytes", mem_per_token);
         println("    load time = %8.2f ms", t_load_us/1000.0f);
-        println("  sample time = %8.2f ms", t_sample_us/1000.0f);
-        println(" predict time = %8.2f ms / %.2f ms per token", t_predict_us/1000.0f, t_predict_us/1000.0f/n_past);
+        println("  sample time = %8.2f ms", t_sample_us/1000.0f/samples);
+        println(" predict time = %8.2f ms / %.2f ms per token", t_predict_us/1000.0f, t_predict_us/1000.0f/predictions);
         println("   total time = %8.2f ms", (t_main_end_us - t_main_start_us)/1000.0f);
     }
     ggml_free(model.ctx);
