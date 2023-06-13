@@ -8,6 +8,7 @@
 #include <Windows.h>
 #include <WinCon.h>
 #endif
+#include <set>
 
 #ifdef WIN32
 // cyan on blue background:
@@ -70,15 +71,15 @@ bool gpt_neox_model_load(const std::string & fname, gpt_neox_model & model, gpt_
         fin.read((char *) &hparams.par_res, sizeof(hparams.par_res));
         fin.read((char *) &hparams.ftype,   sizeof(hparams.ftype));
         const int32_t qntvr = hparams.ftype / GGML_QNT_VERSION_FACTOR;
-        println("n_vocab = %d", hparams.n_vocab);
-        println("n_ctx   = %d", hparams.n_ctx);
-        println("n_embd  = %d", hparams.n_embd);
-        println("n_head  = %d", hparams.n_head);
-        println("n_layer = %d", hparams.n_layer);
-        println("n_rot   = %d", hparams.n_rot);
-        println("par_res = %d", hparams.par_res);
-        println("ftype   = %d", hparams.ftype);
-        println("qntvr   = %d", qntvr);
+        traceln("n_vocab = %d", hparams.n_vocab);
+        traceln("n_ctx   = %d", hparams.n_ctx);
+        traceln("n_embd  = %d", hparams.n_embd);
+        traceln("n_head  = %d", hparams.n_head);
+        traceln("n_layer = %d", hparams.n_layer);
+        traceln("n_rot   = %d", hparams.n_rot);
+        traceln("par_res = %d", hparams.par_res);
+        traceln("ftype   = %d", hparams.ftype);
+        traceln("qntvr   = %d", qntvr);
         hparams.ftype %= GGML_QNT_VERSION_FACTOR;
     }
     // load vocab
@@ -222,7 +223,7 @@ bool gpt_neox_model_load(const std::string & fname, gpt_neox_model & model, gpt_
     {
         int n_tensors = 0;
         size_t total_size = 0;
-        println("");
+        traceln("");
         while (true) {
             int32_t n_dims;
             int32_t length;
@@ -274,7 +275,7 @@ bool gpt_neox_model_load(const std::string & fname, gpt_neox_model & model, gpt_
 //              fflush(stdout);
             }
         }
-        println("done");
+        traceln("done");
         println("model size = %8.2f MB / num tensors = %d", total_size/1024.0/1024.0, n_tensors);
     }
     fin.close();
@@ -347,7 +348,50 @@ static void print_text(gpt_vocab &vocab, std::vector<gpt_vocab::id> &embd, int p
     set_text_color(0x010101, 0x000000); // white on black:
 }
 
+enum {
+    id_end_of_text =     0, // "<|endoftext|>"
+    id_padding     =     1, // "<|padding|>"
+    id_long_hash   = 22902, // "################################"
+    id_less        = 16375, // "<"
+    id_bar          =   93, // "|" less+bar "<|"
+    id_open        = 41533, // "|<"
+    id_close       = 49651, // "|>"
+    id_human       = 13961, // "human"
+    id_human1      = 22705, // "Human"
+    id_redit       = 12289, // "redit"
+    id_twitter     = 16705, // "twitter"
+    id_twitter1    = 31068, // "Twitter"
+    id_column      =    27, // "user"
+    id_user        =  4537, // "user"
+    id_user1       = 23131, // "USER"
+    id_user2       =  6989, // "User"
+    id_system      = 10394, // "system"
+    id_system1     =  7761, // "System"
+    id_system2     = 47146, // "SYSTEM"
+    id_wikipedia   = 25842, // "wikipedia"
+    id_last        = 50276, // "\x20\x20" aka "  " of 50688
+    id_https       =  3614, // 'https'
+    id_http       =  2413, // 'http'
+    id_url         =  1358, // '://'
+    // there is a lot of multi spaces intersperced with LF
+//  id_space       =   209, // "\x20" aka " "
+//  id_lf          =   187, // "\n"
+};
+
+// 2239 ' >'
+
 static void dictionary(gpt_vocab &vocab) {
+/*
+    for (int id = vocab.id_to_token.size() - 1; id > 0; id--) {
+        if (vocab.id_to_token[id].c_str()[0] != 0) {
+            traceln("last: %d of %d \"%s\"", id,
+                (int)vocab.id_to_token.size(), vocab.id_to_token[id].c_str());
+            break;
+        }
+    }
+*/
+#if 0
+    (void)MB_ERR_INVALID_CHARS;
     for (auto e : vocab.token_to_id) {
         auto id = e.second;
         const char* token = e.first.c_str();
@@ -355,47 +399,147 @@ static void dictionary(gpt_vocab &vocab) {
         std::transform(s.begin(), s.end(), s.begin(),
             [](unsigned char c){ return std::tolower(c); });
         const char* u = s.c_str(); // uncased
+        if (strcmp(u, "\x20") == 0) {
+            traceln("id: %d token: \"%s\"", id, token);
+        }
         if (strcmp(u, "user") == 0) {
-            println("id: %d token: \"%s\"", id, token);
+            traceln("id: %d token: \"%s\"", id, token);
         }
         if (strcmp(u, "system") == 0) {
-            println("id: %d token: \"%s\"", id, token);
+            traceln("id: %d token: \"%s\"", id, token);
         }
         if (strcmp(u, "tweet") == 0) {
-            println("id: %d token: \"%s\"", id, token);
+            traceln("id: %d token: \"%s\"", id, token);
         }
         if (strcmp(u, "twitter") == 0) {
-            println("id: %d token: \"%s\"", id, token);
+            traceln("id: %d token: \"%s\"", id, token);
         }
         if (strcmp(u, "redit") == 0) {
-            println("id: %d token: \"%s\"", id, token);
+            traceln("id: %d token: \"%s\"", id, token);
         }
         if (strcmp(u, "wikipedia") == 0) {
-            println("id: %d token: \"%s\"", id, token);
+            traceln("id: %d token: \"%s\"", id, token);
         }
         if (strcmp(u, "assistant") == 0) {
-            println("id: %d token: \"%s\"", id, token);
+            traceln("id: %d token: \"%s\"", id, token);
         }
         if (strcmp(u, "human") == 0) {
-            println("id: %d token: \"%s\"", id, token);
+            traceln("id: %d token: \"%s\"", id, token);
         }
-        if (strcmp(u, "twit") == 0) {
-            println("id: %d token: \"%s\"", id, token);
+        if (strcmp(u, "tweet") == 0) {
+            traceln("id: %d token: \"%s\"", id, token);
         }
-        if (strcmp(u, ":") == 0) {
-            println("id: %d token: \"%s\"", id, token);
+//      if (strcmp(u, ":") == 0) {
+//          traceln("id: %d token: \"%s\"", id, token);
+//      }
+//      if (strstr(u, "<|") != null || strstr(u, ">|") != null || strstr(u, "#") != null) {
+//          traceln("id: %d token: \"%s\"", id, token);
+//      }
+//      if (strcmp(u, ":") == 0) {
+//          traceln("id: %d token: \"%s\"", id, token);
+//      }
+        if (strstr(u, ">") != null || strstr(u, "<") != null) {
+            traceln("id: %d token: \"%s\"", id, token);
         }
-        if (strstr(u, "<|") != null || strstr(u, ">|") != null || strstr(u, "#") != null) {
-            println("id: %d token: \"%s\"", id, token);
-        }
-        if (strcmp(u, ":") == 0) {
-            println("id: %d token: \"%s\"", id, token);
-        }
-        if (strstr(u, ">") != null) {
-            println("id: %d token: \"%s\"", id, token);
+        if (strcmp(u, "|") == 0) {
+            traceln("id: %d token: \"%s\"", id, token);
         }
     }
+#else
+    (void)vocab;
+#endif
 }
+
+gpt_vocab::id sample_top_k_top_p(
+        const gpt_vocab & vocab,
+        const std::set<gpt_vocab::id> &except,
+        const std::set<gpt_vocab::id> &stop,
+        const float * logits,
+        int    top_k,
+        double top_p,
+        double temp,
+        std::mt19937 & rng) {
+    int n_logits = vocab.id_to_token.size();
+    std::vector<std::pair<double, gpt_vocab::id>> logits_id;
+    logits_id.reserve(n_logits);
+    {
+        const double scale = 1.0/temp;
+        for (int i = 0; i < n_logits; i++) {
+            if (except.count(i) == 0) {
+                logits_id.push_back(std::make_pair(logits[i]*scale, i));
+            } else {
+//              traceln("skipped: %d \"%s\"", i, vocab.id_to_token.at(i).c_str());
+            }
+        }
+    }
+    // find the top K tokens
+    std::partial_sort(
+            logits_id.begin(),
+            logits_id.begin() + top_k, logits_id.end(),
+            [](const std::pair<double, gpt_vocab::id> & a, const std::pair<double, gpt_vocab::id> & b) {
+        return a.first > b.first;
+    });
+    logits_id.resize(top_k);
+    bool end_of_text = false;
+    for (int i = 0; i < logits_id.size() && !end_of_text; i++) {
+        int id = logits_id[i].second;
+        end_of_text = stop.count(id) > 0;
+//      if (end_of_text) {
+//          traceln("id: %d token: \"%s\"", id, vocab.id_to_token.at(id).c_str());
+//          debugbreak();
+//      }
+    }
+    if (!end_of_text) {
+        double maxl = -INFINITY;
+        for (const auto & kv : logits_id) {
+            maxl = max(maxl, kv.first);
+        }
+        // compute probs for the top K tokens
+        std::vector<double> probs;
+        probs.reserve(logits_id.size());
+        double sum = 0.0;
+        for (const auto & kv : logits_id) {
+            double p = exp(kv.first - maxl);
+            probs.push_back(p);
+            sum += p;
+        }
+        // normalize the probs
+        for (auto & p : probs) { p /= sum; }
+        if (top_p < 1.0f) {
+            double cumsum = 0.0f;
+            for (int i = 0; i < top_k; i++) {
+                cumsum += probs[i];
+                if (cumsum >= top_p) {
+                    top_k = i + 1;
+                    probs.resize(top_k);
+                    logits_id.resize(top_k);
+                    break;
+                }
+            }
+            cumsum = 1.0/cumsum;
+            for (int i = 0; i < (int) probs.size(); i++) {
+                probs[i] *= cumsum;
+            }
+        }
+//      traceln("");
+//      for (int i = 0; i < (int) probs.size(); i++) {
+//          auto id = logits_id[i].second;
+//          traceln("[%d]: %d '%s' %f\n", i, id, vocab.id_to_token.at(id).c_str(), probs[i]);
+//      }
+        std::discrete_distribution<> dist(probs.begin(), probs.end());
+        int idx = dist(rng);
+        return logits_id[idx].second;
+    } else {
+//      traceln("");
+//      for (int i = 0; i < (int) logits_id.size(); i++) {
+//          auto id = logits_id[i].second;
+//          traceln("[%d]: %d '%s' %f\n", i, id, vocab.id_to_token.at(id).c_str(), logits_id[i].first);
+//      }
+        return id_end_of_text;
+    }
+}
+
+// -p "Question: The best way to learn a new foreign language is? Short Answer: "
 
 int main(int argc, char ** argv) {
 //  run(argc, argv);
@@ -413,14 +557,8 @@ int main(int argc, char ** argv) {
     if (params.seed < 0) {
         params.seed = time(NULL);
     }
-    println("seed = %d", params.seed);
+    traceln("seed = %d", params.seed);
     std::mt19937 rng(params.seed);
-    if (params.prompt.empty()) {
-        prompt = starting_prompt;
-    } else {
-        prompt = params.prompt + "\n";
-    }
-prompt = starting_prompt;
     int64_t t_load_us = 0;
     gpt_vocab vocab;
     gpt_neox_model model;
@@ -428,11 +566,11 @@ prompt = starting_prompt;
     {
         const int64_t t_start_us = ggml_time_us();
         if (!gpt_neox_model_load(params.model, model, vocab)) {
-            println("failed to load model from '%s'", params.model.c_str());
+            traceln("failed to load model from '%s'", params.model.c_str());
             return 1;
         }
         t_load_us = ggml_time_us() - t_start_us;
-        test_gpt_tokenizer(vocab, params.token_test);
+//      test_gpt_tokenizer(vocab, params.token_test);
     }
     // RoPE stands for "Relative Positional Encoding."
     // n_past: https://arxiv.org/pdf/2104.09864.pdf
@@ -446,27 +584,37 @@ prompt = starting_prompt;
     fatal_if(!gpt_neox_eval(model, params.n_threads, 0, { 0, 1, 2, 3 }, logits, mem_per_token));
     t_predict_us += ggml_time_us() - t_start_us;
     dictionary(vocab);
-    params.temp = 0.9f;
     std::vector<gpt_vocab::id> embd;
+    std::set<gpt_vocab::id> except;
+    std::set<gpt_vocab::id> stop;
+    const std::set<gpt_vocab::id> empty;
+    if (!params.prompt.empty()) {
+        prompt = params.prompt + "\n";
+        embd = ::gpt_tokenize(vocab, prompt);
+    }
+    // neox::StableLM has a lot of User: User1: User2: User3: junk
+    except.insert(id_user);
+    except.insert(id_user1);
+    except.insert(id_user2);
+    // don't want any halucinations about urlss
+    except.insert(id_https);
+    except.insert(id_http);
+    except.insert(id_url);
+    stop.insert(id_end_of_text);
+    params.temp = 0.9f;
     int stopid = 0; // vocab.token_to_id["###"];
     n_past = 0;
     bool done = false;
-    bool ask = true;
+    bool ask = prompt.empty();
     int last_id = -1;
     int answer_word_count = 0;
     int64_t predictions = 0;
     int64_t samples = 0;
     while (!done) {
-        if (ask) {
-            std::vector<gpt_vocab::id> u = user_input(vocab);
-            if (u.size() == 0) { break; }
-            embd.insert(embd.end(), u.begin(), u.end());
-            n_past = 0;
-            ask = false;
-            answer_word_count = 0;
-            last_id = -1;
-        } else {
-            print_text(vocab, embd, 0);
+        if (!ask) {
+            if (answer_word_count > 0) {
+                print_text(vocab, embd, 0);
+            }
             t_start_us = ggml_time_us();
             fatal_if(!gpt_neox_eval(model, params.n_threads, n_past, embd, logits, mem_per_token));
             t_predict_us += ggml_time_us() - t_start_us;
@@ -480,18 +628,22 @@ prompt = starting_prompt;
             const int n_vocab = model.hparams.n_vocab;
             gpt_vocab::id id = 0;
             const int64_t t_start_sample_us = ggml_time_us();
-            id = gpt_sample_top_k_top_p(vocab, logits.data() + (logits.size() - n_vocab), top_k, top_p, temp, rng);
+            id = sample_top_k_top_p(vocab, except, answer_word_count > 100 ? stop : empty,
+                logits.data() + (logits.size() - n_vocab), top_k, top_p, temp, rng);
             t_sample_us += ggml_time_us() - t_start_sample_us;
             samples++;
             // add it to the context
-            if (id == stopid) {
+            if (id == id_end_of_text) {
                 ask = true;
-            } else if (answer_word_count > 400) {
+            } else if (id > id_last) {
+                traceln("id: %d > id_last", id);
                 ask = true;
-            } else if (answer_word_count > 200 && vocab.id_to_token[id].c_str()[0] == '\n') {
+            } else if (answer_word_count > 300) {
+                ask = true; // too long
+            } else if (answer_word_count > 150 && vocab.id_to_token[id].c_str()[0] == '\n') {
                 ask = true; // enough
                 print_text(vocab, embd, 0);
-            } else if (answer_word_count > 200 && vocab.id_to_token[id].c_str()[0] == '.') {
+            } else if (answer_word_count > 150 && vocab.id_to_token[id].c_str()[0] == '.') {
                 ask = true; // enough
                 print_text(vocab, embd, 0);
             } else if (id == last_id) {
@@ -501,18 +653,29 @@ prompt = starting_prompt;
                 last_id = id;
                 answer_word_count++;
             }
-//          println("---- added id: %d", id);
+//          traceln("---- added id: %d", id);
+        } else if (params.prompt.empty()) {
+//          traceln("answer_word_count: %d", answer_word_count);
+            std::vector<gpt_vocab::id> u = user_input(vocab);
+            if (u.size() == 0) { break; }
+            embd.insert(embd.end(), u.begin(), u.end());
+            n_past = 0;
+            ask = false;
+            answer_word_count = 0;
+            last_id = -1;
+        } else if (!params.prompt.empty()) {
+            done = true;
         }
     }
     // report timing
     {
         const int64_t t_main_end_us = ggml_time_us();
-        println("");
-        println("mem per token = %8zu bytes", mem_per_token);
-        println("    load time = %8.2f ms", t_load_us/1000.0f);
-        println("  sample time = %8.2f ms", t_sample_us/1000.0f/samples);
-        println(" predict time = %8.2f ms / %.2f ms per token", t_predict_us/1000.0f, t_predict_us/1000.0f/predictions);
-        println("   total time = %8.2f ms", (t_main_end_us - t_main_start_us)/1000.0f);
+        traceln("");
+        traceln("mem per token = %8zu bytes", mem_per_token);
+        traceln("    load time = %8.2f ms", t_load_us/1000.0f);
+        traceln("  sample time = %8.2f ms", t_sample_us/1000.0f/samples);
+        traceln(" predict time = %8.2f ms / %.2f ms per token", t_predict_us/1000.0f, t_predict_us/1000.0f/predictions);
+        traceln("   total time = %8.2f ms", (t_main_end_us - t_main_start_us)/1000.0f);
     }
     ggml_free(model.ctx);
     return 0;

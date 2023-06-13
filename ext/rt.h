@@ -51,13 +51,15 @@ double   seconds(void);     // seconds since boot (3/10MHz resolution)
 uint64_t nanoseconds(void); // nanoseconds since boot (3/10MHz resolution)
 void     printline(const char* file, int line, const char* func,
                    const char* format, ...);
+void     traceline(const char* file, int line, const char* func,
+                   const char* format, ...);
 int      memmap_resource(const char* label, void* *data, int64_t *bytes);
 void*    load_dl(const char* pathname); // dlopen | LoadLibrary
 void*    find_symbol(void* dl, const char* symbol); // dlsym | GetProcAddress
 int      mem_map(const char* filename, void** data, int64_t* bytes, bool ro);
 void     mem_unmap(void* address, int64_t bytes);
 void     sleep_for(double seconds);
-void     _debugbreak(void); // breakpoint
+void     debugbreak(void); // breakpoint or break into debugger
 
 #if defined(__GNUC__) || defined(__clang__)
 #define attribute_packed __attribute__((packed))
@@ -87,13 +89,19 @@ void     _debugbreak(void); // breakpoint
 #define thread_local __thread
 #endif
 
+// println() does fprintf(stderr) + on Windows: OutputDebugString()
+// traceln() on Windows: only OutputDebugString() other platforms println()
+// both println() and traceln() augment output with FILE+LINE+FUNC
+
+
 #define println(...) printline(__FILE__, __LINE__, __func__, "" __VA_ARGS__)
+#define traceln(...) traceline(__FILE__, __LINE__, __func__, "" __VA_ARGS__)
 
 #define assertion(b, ...) do {                                              \
     if (!(b)) {                                                             \
         println("%s false\n", #b); println("" __VA_ARGS__);                 \
         printf("%s false\n", #b); printf("" __VA_ARGS__); printf("\n");     \
-        __debugbreak();                                                     \
+        debugbreak();                                                       \
         exit(1);                                                            \
     }                                                                       \
 } while (0) // better assert
@@ -116,10 +124,7 @@ enum {
     if (_b_) {                                                   \
         printline(__FILE__, __LINE__, __func__, "%s", #b);       \
         printline(__FILE__, __LINE__, __func__, "" __VA_ARGS__); \
-        fprintf(stderr, "%s(%d) %s() %s failed ",                \
-                __FILE__, __LINE__, __func__, #b);               \
-        fprintf(stderr, "" __VA_ARGS__);                         \
-        __debugbreak();                                          \
+        debugbreak();                                            \
         exit(1);                                                 \
     }                                                            \
 } while (0)
@@ -147,11 +152,13 @@ uint32_t random32(uint32_t* state) {
 #define std_output_handle   ((uint32_t)-11)
 #define std_error_handle    ((uint32_t)-12)
 
+void     __stdcall DebugBreak(void);
 void*    __stdcall GetStdHandle(uint32_t stdhandle);
 int32_t  __stdcall QueryPerformanceCounter(int64_t* performance_count);
 int32_t  __stdcall QueryPerformanceFrequency(int64_t* frequency);
 int32_t  __stdcall GetFileSizeEx(void* file, int64_t* size);
 void     __stdcall OutputDebugStringA(const char* s);
+void     __stdcall OutputDebugStringW(const uint16_t* s);
 void*    __stdcall FindResourceA(void* module, const char* name, const char* type);
 uint32_t __stdcall SizeofResource(void* module, void* res);
 void*    __stdcall LoadResource(void* module, void* res);
@@ -171,6 +178,9 @@ void*    __stdcall CreateFileA(const char* filename, uint32_t access,
                     uint32_t creation_disposition,
                     uint32_t flags_and_attributes, void* template_file);
 int32_t  __stdcall UnmapViewOfFile(void* address);
+int32_t  __stdcall MultiByteToWideChar(uint32_t code_page, uint32_t flags,
+                    const char* utf8, int count8,
+                    uint16_t* utf16, int count16);
 
 double seconds() { // since_boot
     int64_t qpc = 0;
@@ -184,29 +194,80 @@ double seconds() { // since_boot
     return (double)qpc * one_over_freq;
 }
 
-int64_t nanoseconds() {
+uint64_t nanoseconds(void) {
     return (int64_t)(seconds() * NSEC_IN_SEC);
+}
+
+enum { CP_UTF8 = 65001 };
+enum { MB_ERR_INVALID_CHARS = 0x00000008 };
+
+int __utf16bytes__(const char* utf8) { // number of uint16_t chars needed >= 1
+    int n = (int)strlen(utf8);
+    int k = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, utf8, n,
+        null, 0);
+    return (max(k, 0) + 1) * sizeof(uint16_t); // 2 tail bytes for "\x0000"
+}
+
+const uint16_t* __utf8to16__(const char* utf8, int utf8_count,
+        uint16_t* utf16, int utf16_count) {
+    assert(utf16_count > 0);
+    if (utf16_count > 0) {
+        MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, utf8,
+            utf8_count, utf16, utf16_count);
+        utf16[utf16_count - 1] = 0;
+    }
+    return utf16;
+}
+
+// 3 calls to MultiByteToWideChar() not a performance champion but
+// very convinient. If caller needs performance - do it by hand
+#define utf8to16(s) (__utf8to16__(s, -1, alloca(__utf16bytes__(s)), __utf16bytes__(s)))
+
+void ods_utf8(const char* utf8) { // OutputDebugString UTF8
+    int n = (int)strlen(utf8);
+    if (n > 0) {
+        OutputDebugStringW(utf8to16(utf8));
+    }
+}
+
+void traceline(const char* file, int line, const char* func,
+        const char* format, ...) {
+    enum { max_text = 32 * 1024 };
+    char* text = (char*)alloca(max_text);
+    va_list vl;
+    va_start(vl, format);
+    char* p = text + snprintf(text, max_text - 2, "%s(%d): %s() ",
+        file, line, func);
+    vsnprintf(p, max_text - 2 - (p - text), format, vl);
+    text[max_text - 1] = 0;
+    text[max_text - 2] = 0;
+    size_t n = strlen(text);
+    if (n > 0 && text[n - 1] != '\n') { text[n] = '\n'; text[n + 1] = 0;  }
+    va_end(vl);
+    ods_utf8(text);
 }
 
 void printline(const char* file, int line, const char* func,
         const char* format, ...) {
-    static thread_local char text[32 * 1024];
+    enum { max_text = 32 * 1024 };
+    char* text = (char*)alloca(max_text);
     va_list vl;
     va_start(vl, format);
-    char* p = text + snprintf(text, countof(text), "%s(%d): %s() ",
+    char* p = text + snprintf(text, max_text - 2, "%s(%d): %s() ",
         file, line, func);
-    vsnprintf(p, countof(text) - (p - text), format, vl);
-    text[countof(text) - 1] = 0;
-    text[countof(text) - 2] = 0;
+    vsnprintf(p, max_text - 2 - (p - text), format, vl);
+    text[max_text - 1] = 0;
+    text[max_text - 2] = 0;
     size_t n = strlen(text);
     if (n > 0 && text[n - 1] != '\n') { text[n] = '\n'; text[n + 1] = 0;  }
     va_end(vl);
-    OutputDebugStringA(text);
+    ods_utf8(text);
     // chop off full path from filename:
     p = text + strlen(file);
     while (p > text && *p != '\\' && *p != '/') { p--; }
     if (p != text) { p++; }
     fprintf(stderr, "%s", p);
+    fflush(stderr);
 }
 
 int memmap_resource(const char* label, void* *data, int64_t *bytes) {
@@ -329,9 +390,13 @@ void mem_unmap(void* address, int64_t bytes) {
     }
 }
 
+void debugbreak(void) {
+    DebugBreak();
+}
+
 #else // POSIX and APPLE
 
-void _debugbreak(void) {
+void debugbreak(void) {
     raise(SIGTRAP);
 }
 
@@ -382,9 +447,9 @@ void printline(const char* file, int line, const char* func,
     if (p != file) { p++; }
     va_list vl;
     va_start(vl, format);
-    printf("%s(%d): %s() ", p, line, func);
+    fprintf(stderr, "%s(%d): %s() ", p, line, func);
     vprintf(format, vl);
-    printf("\n");
+    fprintf(stderr, "\n"); // will fflush(stderr)
 }
 
 #endif
