@@ -245,8 +245,74 @@ bool gpt_neox_model_load(const std::string & fname, gpt_neox_model & model, gpt_
     return true;
 }
 
+#if 0
+#define system_prompt "<|SYSTEM|># StableLM Tuned (Alpha version) "     \
+"- StableLM is a helpful and harmless open-source AI language model "   \
+  "developed by StabilityAI. "                                          \
+"- StableLM is excited to be able to help the user, but will refuse "   \
+  "to do anything that could be considered harmful to the user. "       \
+"- StableLM is more than just an information source, StableLM is also " \
+  "able to write poetry, short stories, and make jokes. "               \
+"- StableLM will refuse to participate in anything that could harm a "  \
+  "human. "
+#else
+#define system_prompt ""
+#endif
+
+// #define starting_prompt system_prompt                                   \
+// "key: markets\n"                                                        \
+// "tweet: Take feedback from nature and markets, not from people.\n"      \
+// "###\n"                                                                 \
+// "key: children\n"                                                       \
+// "tweet: Maybe we die so we can come back as children.\n"                \
+// "###\n"                                                                 \
+// "key: startups\n"                                                       \
+// "tweet: Startups shouldn’t worry about how to put out fires, "          \
+// "they should worry about how to start them.\n"                          \
+// "###\n"                                                                 \
+// "key: hugging face\n"                                                   \
+// "tweet: "
+
+#define starting_prompt system_prompt \
+    "key: question\n"                 \
+    "tweet: Answer.\n"                \
+    "###\n"
+
+#include <Windows.h>
+
+static std::vector<gpt_vocab::id> user_input(gpt_vocab &vocab) {
+    char text[4096] = {0};
+    std::vector<gpt_vocab::id> append;
+    while (text[0] == 0 && append.size() == 0) {
+        printf("\nUser: ");
+        fgets(text, countof(text) , stdin);
+        if (strstr(text, "qiut") == text || strstr(text, "exit")) {
+            return std::vector<gpt_vocab::id>();
+        } else {
+            return ::gpt_tokenize(vocab, text);
+        }
+    }
+    return std::vector<gpt_vocab::id>();
+}
+
+static void print_text(gpt_vocab &vocab, std::vector<gpt_vocab::id> &embd, int pos) {
+    int k = 0;
+    for (auto id : embd) {
+        const char* token = vocab.id_to_token[id].c_str();
+        if (k >= pos) {
+            printf("%s", token);
+        }
+        k++;
+    }
+    fflush(stdout);
+}
+
 int main(int argc, char ** argv) {
+//  run(argc, argv);
     ggml_time_init();
+//  enum { CP_UTF8 = 65001 };
+    SetConsoleOutputCP(CP_UTF8);
+    std::string prompt = "";
     const int64_t t_main_start_us = ggml_time_us();
     gpt_params params;
 //  params.model = "models/stablelm-base-alpha-3b/ggml-model-f16.bin";
@@ -260,8 +326,11 @@ int main(int argc, char ** argv) {
     println("seed = %d", params.seed);
     std::mt19937 rng(params.seed);
     if (params.prompt.empty()) {
-        params.prompt = gpt_random_prompt(rng);
+        prompt = starting_prompt;
+    } else {
+        prompt = params.prompt + "\n";
     }
+prompt = starting_prompt;
     int64_t t_load_us = 0;
     gpt_vocab vocab;
     gpt_neox_model model;
@@ -279,61 +348,55 @@ int main(int argc, char ** argv) {
     int64_t t_sample_us  = 0;
     int64_t t_predict_us = 0;
     std::vector<float> logits;
-    // tokenize the prompt
-    std::vector<gpt_vocab::id> embd_inp = ::gpt_tokenize(vocab, params.prompt);
-    params.n_predict = std::min(params.n_predict, model.hparams.n_ctx - (int) embd_inp.size());
-    println("number of tokens in prompt = %zu", embd_inp.size());
-    for (int i = 0; i < embd_inp.size(); i++) {
-        println("token[%d] = %6d, %s", i, embd_inp[i], vocab.id_to_token.at(embd_inp[i]).c_str());
-    }
-    println("");
-    std::vector<gpt_vocab::id> embd;
     // determine the required inference memory per token:
     size_t mem_per_token = 0;
     gpt_neox_eval(model, params.n_threads, 0, { 0, 1, 2, 3 }, logits, mem_per_token);
-    for (int i = embd.size(); i < embd_inp.size() + params.n_predict; i++) {
-        // predict
-        if (embd.size() > 0) {
-            const int64_t t_start_us = ggml_time_us();
-            if (!gpt_neox_eval(model, params.n_threads, n_past, embd, logits, mem_per_token)) {
-                println("Failed to predict");
-                return 1;
-            }
-            t_predict_us += ggml_time_us() - t_start_us;
-        }
-        n_past += embd.size();
-        embd.clear();
-        if (i >= embd_inp.size()) {
+    params.temp = 0.9f;
+    std::vector<gpt_vocab::id> embd;
+    int stopid = 0; // vocab.token_to_id["###"];
+    n_past = 0;
+    bool done = false;
+    bool ask = true;
+    int last_id = -1;
+    int answer_word_count = 0;
+    while (!done) {
+        if (ask) {
+            std::vector<gpt_vocab::id> u = user_input(vocab);
+            if (u.size() == 0) { break; }
+            embd.insert(embd.end(), u.begin(), u.end());
+            n_past = 0;
+            ask = false;
+            answer_word_count = 0;
+            last_id = -1;
+        } else {
+            print_text(vocab, embd, 0);
+            fatal_if(!gpt_neox_eval(model, params.n_threads, n_past, embd, logits, mem_per_token));
+            n_past += embd.size();
+            embd.clear();
             // sample next token
             const int   top_k = params.top_k;
             const float top_p = params.top_p;
             const float temp  = params.temp;
             const int n_vocab = model.hparams.n_vocab;
             gpt_vocab::id id = 0;
-            {
-                const int64_t t_start_sample_us = ggml_time_us();
-                id = gpt_sample_top_k_top_p(vocab, logits.data() + (logits.size() - n_vocab), top_k, top_p, temp, rng);
-                t_sample_us += ggml_time_us() - t_start_sample_us;
-            }
+            const int64_t t_start_sample_us = ggml_time_us();
+            id = gpt_sample_top_k_top_p(vocab, logits.data() + (logits.size() - n_vocab), top_k, top_p, temp, rng);
+            t_sample_us += ggml_time_us() - t_start_sample_us;
             // add it to the context
-            embd.push_back(id);
-        } else {
-            // if here, it means we are still processing the input prompt
-            for (int k = i; k < embd_inp.size(); k++) {
-                embd.push_back(embd_inp[k]);
-                if (embd.size() > params.n_batch) {
-                    break;
-                }
+            if (id == stopid) {
+                ask = true;
+            } else if (answer_word_count > 20 && vocab.id_to_token[id].c_str()[0] == '\n') {
+                ask = true; // enough
+            } else if (answer_word_count > 20 && vocab.id_to_token[id].c_str()[0] == '.') {
+                ask = true; // enough
+            } else if (id == last_id) {
+                ask = true; // stutering
+            } else {
+                embd.push_back(id);
+                last_id = id;
+                answer_word_count++;
             }
-            i += embd.size() - 1;
-        }
-        // display text
-        for (auto id : embd) {
-            println("%s", vocab.id_to_token[id].c_str());
-        }
-        // end of text token
-        if (embd.back() == 0) {
-            break;
+//          println("---- added id: %d", id);
         }
     }
     // report timing
@@ -349,3 +412,17 @@ int main(int argc, char ** argv) {
     ggml_free(model.ctx);
     return 0;
 }
+
+/*
+
+50278, 50279, 50277, 1, 0
+system_prompt = """<|SYSTEM|># StableLM Tuned (Alpha version)
+- StableLM is a helpful and harmless open-source AI language model developed by StabilityAI.
+- StableLM is excited to be able to help the user, but will refuse to do anything that could be considered harmful to the user.
+- StableLM is more than just an information source, StableLM is also able to write poetry, short stories, and make jokes.
+- StableLM will refuse to participate in anything that could harm a human.
+"""
+
+prompt = f"{system_prompt}<|USER|>What's your mood today?<|ASSISTANT|>"
+
+*/

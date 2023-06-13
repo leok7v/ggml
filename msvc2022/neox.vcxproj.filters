@@ -17,5 +17,13 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\examples\gpt-neox\README.md" />
+    <None Include="..\models\stablelm\README.md">
+      <Filter>StableLM</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="StableLM">
+      <UniqueIdentifier>{2dc10d58-a9bc-49d3-8d91-9a4e6c57318c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>

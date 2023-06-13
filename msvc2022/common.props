@@ -4,7 +4,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>$(SolutionDir)..;$(SolutionDir)..\include;$(SolutionDir)..\include\ggml;$(SolutionDir)..\examples;$(SolutionDir)..\ext;</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>STRICT;WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;_CRT_NONSTDC_NO_WARNINGS=1;CRT_SECURE_NO_DEPRECATE=1;_CRT_NONSTDC_NO_DEPRECATE=1;_SCL_SECURE_NO_WARNINGS=1;_CRT_SECURE_NO_WARNINGS=1;WIN32;_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING=1;_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS=1%(PreprocessorDefinitions);</PreprocessorDefinitions>
+      <PreprocessorDefinitions>__AVX2__=1;__AVX__=1;STRICT;WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;_CRT_NONSTDC_NO_WARNINGS=1;CRT_SECURE_NO_DEPRECATE=1;_CRT_NONSTDC_NO_DEPRECATE=1;_SCL_SECURE_NO_WARNINGS=1;_CRT_SECURE_NO_WARNINGS=1;WIN32;_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING=1;_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DisableSpecificWarnings>4244;4267;4996;4189;4127;4701</DisableSpecificWarnings>
       <WarningLevel>Level4</WarningLevel>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
